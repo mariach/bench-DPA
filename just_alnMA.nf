@@ -38,7 +38,7 @@ bucs.combine(dataset_fasta)
 process aln {
 
   tag "${params.msa_method}/${buc}/${id}"
-  publishDir "${params.msa_dir}/$buc/$id"
+  publishDir "${params.msa_dir}/$buc/$id", mode: 'move', overwrite: true
 
   input:
   set buc, dataset_name, id, file(fasta) from data_pairs
@@ -66,7 +66,7 @@ ref_fasta.combine(alignments, by: 0)
 process score {
     tag "${params.score}/${buc}/${id}"
     container "${params.score}"
-    publishDir "${params.msa_dir}/${buc}/${id}"
+    publishDir "${params.msa_dir}/${buc}/${id}", mode: 'move', overwrite: true
     
     input: 
     set ( id, file(ref), buc,file(aln) ) from data_aln
