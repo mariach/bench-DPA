@@ -2,8 +2,6 @@ import groovy.text.*
 import java.io.*
 
 
-params.aligners = "$baseDir/aligners.txt"
-params.scores="$baseDir/scores.txt"
 params.output_dir = ("$baseDir/output")
 params.datasets_directory="$baseDir/benchmark_datasets"
 datasets_home= file(params.datasets_directory)
@@ -12,23 +10,7 @@ params.bucket="100 200 300"
 params.msa_dir = "MSAs"
 params.msa_method ="msaprobs" //clustalo, mafft
 
-//Reads which aligners to use
-boxes = file(params.aligners).readLines().findAll { it.size()>0 }
 
-
-//Reads which score to use
-//boxes_score = file(params.scores).readLines().findAll { it.size()>0 }
-
-boxes_score=["$params.score"]
-/*
- * Creates a channel emitting a triple for each file in the datase composed
- * by the following element:
- *
- * -Name of the dataset (e.g. Balibase,Oxfam..)
- * -Name of the file (e.g. B11001_RV11 )
- * -the file itself
- *
- */
 
 Channel
   .fromPath("${params.datasets_directory}/${params.dataset}/*.fa")
@@ -37,7 +19,7 @@ Channel
 
 Channel
   .fromPath("${params.datasets_directory}/${params.dataset}/*.fa.ref")
-  .map { tuple( it.name.tokenize('.')[0], it.parent.name, it ) }
+  .map { tuple( it.name.tokenize('.')[0], it ) }
   .into{ ref_fasta }
 
 Channel.from( "${params.bucket}".tokenize() )
@@ -59,20 +41,15 @@ process aln {
   publishDir "${params.msa_dir}/$buc/$id"
 
   input:
-  each method from boxes
   set buc, dataset_name, id, file(fasta) from data_pairs
 
 
   output:
-  set id, buc, dataset_name, method, file('aln.fa') into alignments 
+  set id, buc, file('aln.fa') into alignments 
   file("*mafftdnd") 
 
   """
-
-  #clustalo -i $fasta --outfmt fasta --guidetree-out the.tree --threads $task.cpus --force
-  #t_coffee -seq $fasta -outfile aln.fa  -dpa -dpa_tree the.tree  -dpa_method ${params.msa_method}_msa -dpa_nseq $buc
-
-  t_coffee -dpa -dpa_method ${params.msa_method} -dpa_tree mafftdnd -seq $fasta -outfile aln.fa  -dpa_nseq $buc
+  t_coffee -dpa -dpa_method ${params.msa_method} -dpa_tree mafftdnd -seq $fasta -outfile aln.fa  -dpa_nseq $buc 2> /dev/null
   """
 }
 
@@ -92,7 +69,7 @@ process score {
     publishDir "${params.msa_dir}/${buc}/${id}"
     
     input: 
-    set ( id, loc, file(ref), buc, tag, method, file(aln) ) from data_aln
+    set ( id, file(ref), buc,file(aln) ) from data_aln
     
 
     output: 
@@ -103,7 +80,7 @@ process score {
      cat score_temp.out | awk '{ print "SOP="\$2}' >  score.out
      
      perl ~/bin/extract_refAln.pl ${aln} ${ref} tmp_extracted.aln                          
-     t_coffee -other_pg aln_compare -al1 ${ref} -al2 tmp_extracted.aln -compare_mode tc | grep -v "seq" | grep -v '*' | awk '{print "TC= "\$4}' >> score.out
+     t_coffee -other_pg aln_compare -al1 ${ref} -al2 tmp_extracted.aln -compare_mode tc | grep -v "seq" | grep -v '*' | awk '{print "TC= "\$4}' >> score.out 
     """
 }
 
