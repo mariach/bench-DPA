@@ -6,7 +6,7 @@ params.output_dir = ("$baseDir/output")
 params.datasets_directory="$baseDir/benchmark_datasets"
 datasets_home= file(params.datasets_directory)
 params.score="bengen/baliscore"
-params.bucket="100 200 300"
+params.bucket="50 100 200 300 400 500 600 700 800 900 1000"
 params.msa_dir = "MSAs"
 params.msa_method ="msaprobs" //clustalo, mafft
 
